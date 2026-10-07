@@ -1,0 +1,30 @@
+name: sync
+
+on:
+  schedule:
+    - cron: '55 21 * * *'      # UTC 18:55 = 北京时间每天 02:55，排队时间，实际执行时间会晚3小时左右
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: sync-upstream
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Sync fork with upstream
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          gh api \
+            --method POST \
+            -H "Accept: application/vnd.github+json" \
+            "repos/${REPOSITORY}/merge-upstream" \
+            -f "branch=${BRANCH}" \
+            --jq '"分支 \(.base_branch) → \(.merge_type)\n\(.message)"'
